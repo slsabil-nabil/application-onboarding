@@ -22,6 +22,7 @@ class SuperAdminApplicationsController extends Controller
     {
         return $this->applicationsIndex($request);
     }
+
     /**
      * قائمة طلبات الانضمام مع فلتر الحالة
      */
@@ -30,8 +31,8 @@ class SuperAdminApplicationsController extends Controller
         $status = $request->query('status', 'pending');
 
         $applications = BusinessApplication::when($status === 'pending', function ($query) {
-            return $query->where('status', 'pending');
-        })
+                return $query->where('status', 'pending');
+            })
             ->when($status === 'accepted', function ($query) {
                 return $query->where('status', 'accepted');
             })
@@ -45,8 +46,22 @@ class SuperAdminApplicationsController extends Controller
             ->get();
 
         return view('application-onboarding::superadmin.applications.index', [
-            'applications' => $applications,
+            'applications'  => $applications,
             'currentStatus' => $status,
+        ]);
+    }
+
+    /**
+     * عرض تفاصيل طلب واحد (زر View)
+     */
+    public function show(BusinessApplication $application)
+    {
+        // يمكنك تمرير industryOptions من config أو helper إن أحببت
+        $industryOptions = config('application_onboarding.industry_options', []);
+
+        return view('application-onboarding::superadmin.applications.show', [
+            'application'      => $application,
+            'industryOptions'  => $industryOptions,
         ]);
     }
 
@@ -173,6 +188,56 @@ class SuperAdminApplicationsController extends Controller
                 'title' => ['en' => 'Document request sent', 'ar' => 'تم إرسال طلب الوثائق'],
                 'detail' => ['en' => 'Status updated to Appeal.', 'ar' => 'تم تحديث الحالة إلى الاستئناف.'],
                 'level' => 'success',
+            ]);
+    }
+
+    /**
+     * الموافقة على الطلب
+     * مبدئياً هنا فقط نحدث حالة الطلب إلى accepted.
+     * يمكن لاحقاً إضافة إنشاء منشأة/وكالة وربطها حسب احتياج مشروعك.
+     */
+    public function approve(BusinessApplication $application)
+    {
+        $application->status = 'accepted';
+        $application->rejection_reason = null;
+        $application->save();
+
+        return redirect()
+            ->route('superadmin.applications.index', ['status' => 'accepted'])
+            ->with('success', [
+                'title'  => ['en' => 'Application approved', 'ar' => 'تمت الموافقة على الطلب'],
+                'detail' => ['en' => $application->business_name, 'ar' => $application->business_name],
+                'level'  => 'success',
+            ]);
+    }
+
+    /**
+     * رفض الطلب
+     */
+    public function decline(Request $request, BusinessApplication $application)
+    {
+        $request->validate([
+            'rejection_reason' => 'nullable|string|max:120',
+            'include_reason'   => 'nullable|in:0,1',
+        ]);
+
+        $application->status = 'rejected';
+
+        // لو اختار يرسل سبب، نحفظه، غير كذا نخليه null
+        if ($request->input('include_reason') == '1') {
+            $application->rejection_reason = $request->string('rejection_reason')->value();
+        } else {
+            $application->rejection_reason = null;
+        }
+
+        $application->save();
+
+        return redirect()
+            ->route('superadmin.applications.index', ['status' => 'rejected'])
+            ->with('success', [
+                'title'  => ['en' => 'Application declined', 'ar' => 'تم رفض الطلب'],
+                'detail' => ['en' => $application->business_name, 'ar' => $application->business_name],
+                'level'  => 'success',
             ]);
     }
 }
