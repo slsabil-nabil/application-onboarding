@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // لو الجدول موجود لا تعيد إنشائه (حالة Tabour الحالية)
+        if (Schema::hasTable('form_fields')) {
+            return;
+        }
+
+        Schema::create('form_fields', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');              // مثلاً: business_name
+            $table->string('maps_to_column')->nullable(); // عمود الجدول اللي يرتبط به إن وجد
+            $table->string('label');             // عنوان الحقل
+            $table->string('type');              // text, email, textarea, file, list ...
+            $table->boolean('is_required')->default(true);
+            $table->integer('order')->default(0);
+            $table->json('options')->nullable(); // لقوائم الاختيار
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('form_fields');
+    }
+};
