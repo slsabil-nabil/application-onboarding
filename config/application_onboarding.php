@@ -18,4 +18,5 @@ return [
     'admin_guard' => null,
     'public_layout' => 'layouts.public',
     'admin_layout' => 'layouts.admin',
+    'form_builder_prefix' => 'superadmin/form-builder',
 ];

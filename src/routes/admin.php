@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Slsabil\ApplicationOnboarding\Http\Controllers\SuperAdminApplicationsController;
+use Slsabil\ApplicationOnboarding\Http\Controllers\FormBuilderController;
 
+// ===== طلبات الإعداد (طلبات الانضمام) =====
 Route::group([
     'prefix' => config('application_onboarding.admin_prefix', 'superadmin/applications'),
     'as' => 'superadmin.applications.',
@@ -22,4 +24,22 @@ Route::group([
 
     Route::post('{application}/documents-request', [SuperAdminApplicationsController::class, 'sendDocumentsRequest'])
         ->name('documents-request');
+});
+
+
+// ===== مُنشئ فورم الطلب (Form Builder) =====
+Route::group([
+    'prefix' => config('application_onboarding.form_builder_prefix', 'superadmin/form-builder'),
+    'as' => 'superadmin.form-builder.',
+    'middleware' => config('application_onboarding.admin_middleware', ['web', 'auth']),
+], function () {
+    Route::get('/', [FormBuilderController::class, 'index'])->name('index');
+    Route::post('/', [FormBuilderController::class, 'store'])->name('store');
+
+    Route::get('{field}/edit', [FormBuilderController::class, 'edit'])->name('edit');
+    Route::put('{field}', [FormBuilderController::class, 'update'])->name('update');
+
+    Route::delete('{field}', [FormBuilderController::class, 'destroy'])->name('destroy');
+
+    Route::post('reorder', [FormBuilderController::class, 'reorder'])->name('reorder');
 });
