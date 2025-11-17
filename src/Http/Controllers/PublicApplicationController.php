@@ -49,10 +49,6 @@ class PublicApplicationController extends Controller
             'owner_name' => 'required|string|max:255',
             'owner_email' => 'required|email|max:255',
             'owner_phone' => 'nullable|string|max:40',
-            'accept_policies' => 'required|string|in:yes',
-        ], [
-            'accept_policies.required' => __('You must accept the application policies.'),
-            'accept_policies.in' => __('You must accept the application policies.'),
         ]);
 
         // معالجة خيار "Other" لنوع الصناعة
@@ -73,7 +69,6 @@ class PublicApplicationController extends Controller
         // form_data: كل مدخلات النموذج (عدا التوكن وحقل الموافقة)
         $formData = $request->except([
             '_token',
-            'accept_policies',
         ]);
 
         if ($token) {

@@ -3,7 +3,7 @@
 @section('content')
     <div class="container mx-auto px-6 py-12 max-w-2xl">
         <h1 class="text-3xl font-bold text-gray-800 text-center mb-8">@tr('Apply to Join')</h1>
-        <p class="text-center text-gray-600 mb-8">@tr('Fill out the form below to submit your business for review.')</p>
+        <p class="text-center text-gray-600 mb-8">@tr('Fill out the form below to submit your system for review.')</p>
 
         @if ($errors->any())
             <div class="p-4 mb-6 text-sm text-red-800 rounded-lg bg-red-50">
@@ -34,175 +34,173 @@
                     </p>
                 </div>
             @else
-                @php return; @endphp
-            @endif
+                <form id="applicationForm" action="{{ route('application.store', $application->resubmit_token ?? null) }}"
+                    method="POST" enctype="multipart/form-data">
+                    @csrf
 
-            <form id="applicationForm" action="{{ route('application.store', $application->resubmit_token ?? null) }}"
-                method="POST" enctype="multipart/form-data">
-                @csrf
-
-                @foreach ($fields as $field)
-                    @if ($field->type === 'heading')
-                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4 mt-8">
-                            {{ trk("application.form.fields.$field->name.label", $field->label) }}
-                        </h3>
-                    @else
-                        <div class="mb-4">
-                            <label for="{{ $field->name }}" class="block text-gray-700 font-bold mb-2">
+                    @foreach ($fields as $field)
+                        @if ($field->type === 'heading')
+                            <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4 mt-8">
                                 {{ trk("application.form.fields.$field->name.label", $field->label) }}
-                                @if ($field->is_required)
-                                    <span class="text-red-500">*</span>
-                                @endif
-                            </label>
-
-                            @php
-                                // القيمة السابقة من old()
-                                $mapped = $field->maps_to_column ?? null;
-                                $prefill = old($field->name);
-
-                                // إن لم توجد old() وكان هذا فتح عبر توكن إعادة التعبئة، عبّئ من السجل
-                                if ($prefill === null && !empty($application)) {
-                                    if ($mapped !== null && isset($application->{$mapped})) {
-                                        $prefill = $application->{$mapped};
-                                    } elseif (isset($application->form_data[$field->name])) {
-                                        $prefill = $application->form_data[$field->name];
-                                    }
-                                } // تحسين التعامل مع المصفوفات
-                                $prefill = is_array($prefill) ? '' : $prefill;
-                            @endphp
-
-                            @if ($field->type === 'textarea')
-                                <textarea name="{{ $field->name }}" id="{{ $field->name }}"
-                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">{{ $prefill }}</textarea>
-                            @elseif ($field->type === 'file')
-                                <label for="{{ $field->name }}"
-                                    class="cursor-pointer bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-full hover:bg-blue-100">
-                                    @tr('Choose Files')
+                            </h3>
+                        @else
+                            <div class="mb-4">
+                                <label for="{{ $field->name }}" class="block text-gray-700 font-bold mb-2">
+                                    {{ trk("application.form.fields.$field->name.label", $field->label) }}
+                                    @if ($field->is_required)
+                                        <span class="text-red-500">*</span>
+                                    @endif
                                 </label>
-                                <input type="file" name="{{ $field->name }}[]" id="{{ $field->name }}" class="hidden"
-                                    onchange="updateFileList('{{ $field->name }}', '{{ $field->name }}-list')" multiple>
-                                <p id="{{ $field->name }}-list" class="text-xs text-gray-500 mt-2"></p>
-                            @elseif ($field->type === 'list')
+
                                 @php
-                                    $raw = $field->options ?? [];
-                                    $pairs = [];
+                                    $mapped = $field->maps_to_column ?? null;
+                                    $prefill = old($field->name);
 
-                                    foreach ($raw as $k => $lbl) {
-                                        $pairs[] = [
-                                            'value' => is_int($k) ? (string) $lbl : (string) $k,
-                                            'label' => (string) $lbl,
-                                        ];
-                                    }
-
-                                    $pref = is_array($prefill) ? '' : (string) $prefill;
-                                    $selectedValue = '';
-
-                                    foreach ($pairs as $p) {
-                                        if (strcasecmp($p['value'], $pref) === 0) {
-                                            $selectedValue = $p['value'];
-                                            break;
+                                    if ($prefill === null && !empty($application)) {
+                                        if ($mapped !== null && isset($application->{$mapped})) {
+                                            $prefill = $application->{$mapped};
+                                        } elseif (isset($application->form_data[$field->name])) {
+                                            $prefill = $application->form_data[$field->name];
                                         }
                                     }
 
-                                    if ($selectedValue === '' && $pref !== '') {
+                                    $prefill = is_array($prefill) ? '' : $prefill;
+                                @endphp
+
+                                @if ($field->type === 'textarea')
+                                    <textarea name="{{ $field->name }}" id="{{ $field->name }}"
+                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">{{ $prefill }}</textarea>
+                                @elseif ($field->type === 'file')
+                                    <label for="{{ $field->name }}"
+                                        class="cursor-pointer bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-full hover:bg-blue-100">
+                                        @tr('Choose Files')
+                                    </label>
+                                    <input type="file" name="{{ $field->name }}[]" id="{{ $field->name }}"
+                                        class="hidden"
+                                        onchange="updateFileList('{{ $field->name }}', '{{ $field->name }}-list')"
+                                        multiple>
+                                    <p id="{{ $field->name }}-list" class="text-xs text-gray-500 mt-2"></p>
+                                @elseif ($field->type === 'list')
+                                    @php
+                                        $raw = $field->options ?? [];
+                                        $pairs = [];
+
+                                        foreach ($raw as $k => $lbl) {
+                                            $pairs[] = [
+                                                'value' => is_int($k) ? (string) $lbl : (string) $k,
+                                                'label' => (string) $lbl,
+                                            ];
+                                        }
+
+                                        $pref = is_array($prefill) ? '' : (string) $prefill;
+                                        $selectedValue = '';
+
                                         foreach ($pairs as $p) {
-                                            if (strcasecmp($p['label'], $pref) === 0) {
+                                            if (strcasecmp($p['value'], $pref) === 0) {
                                                 $selectedValue = $p['value'];
                                                 break;
                                             }
                                         }
-                                    }
 
-                                    $forceOther = false;
-                                    if ($field->name === 'industry_type' && $pref !== '' && $selectedValue === '') {
-                                        $forceOther = true;
-                                        $selectedValue = 'Other';
-                                    }
-
-                                    $hasOther = collect($pairs)->contains(
-                                        fn($p) => strcasecmp($p['value'], 'Other') === 0 ||
-                                            strcasecmp($p['label'], 'Other') === 0,
-                                    );
-                                    if (!$hasOther) {
-                                        $pairs[] = ['value' => 'Other', 'label' => 'Other'];
-                                    }
-
-                                    $optKeyFor = function (string $label) use ($field) {
-                                        return "application.form.fields.$field->name.options." .
-                                            \Illuminate\Support\Str::slug($label, '_');
-                                    };
-
-                                    $__opts = [];
-                                    foreach ($pairs as $p) {
-                                        $__opts[$p['value']] = trk($optKeyFor($p['label']), $p['label']);
-                                    }
-                                @endphp
-
-                                <x-ui.status-select name="{{ $field->name }}" id="{{ $field->name }}" :required="$field->is_required"
-                                    :placeholder="tr('Select an option')" :value="$selectedValue" :options="$__opts" />
-
-                                @if ($field->name === 'industry_type')
-                                    {{-- حقل يظهر فقط عند اختيار Other --}}
-                                    <div class="mb-4" id="industry_other_block" style="display:none">
-                                        <label for="industry_type_other" class="block text-gray-700 font-bold mb-2">
-                                            @tr('Please specify the industry')
-                                        </label>
-                                        <input type="text" name="industry_type_other" id="industry_type_other"
-                                            value="{{ old('industry_type_other', $forceOther ? $pref : '') }}"
-                                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-                                            placeholder="@tr('Type your industry')">
-                                        @error('industry_type_other')
-                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-
-                                    <script>
-                                        document.addEventListener('DOMContentLoaded', function() {
-                                            const select = document.getElementById('{{ $field->name }}');
-                                            const otherInput = document.querySelector('[name="industry_type_other"]');
-                                            if (!select || !otherInput) return;
-
-                                            const container = otherInput.closest('.mb-4') || otherInput.parentElement;
-
-                                            const toggle = () => {
-                                                const isOther = (select.value || '').toLowerCase() === 'other';
-                                                container.style.display = isOther ? 'block' : 'none';
-                                                if (!isOther) {
-                                                    otherInput.value = '';
+                                        if ($selectedValue === '' && $pref !== '') {
+                                            foreach ($pairs as $p) {
+                                                if (strcasecmp($p['label'], $pref) === 0) {
+                                                    $selectedValue = $p['value'];
+                                                    break;
                                                 }
-                                            };
+                                            }
+                                        }
 
-                                            @if ($forceOther)
-                                                if (!otherInput.value) {
-                                                    otherInput.value = @json($pref);
-                                                }
-                                            @endif
+                                        $forceOther = false;
+                                        if ($field->name === 'industry_type' && $pref !== '' && $selectedValue === '') {
+                                            $forceOther = true;
+                                            $selectedValue = 'Other';
+                                        }
 
-                                            toggle();
-                                            select.addEventListener('change', toggle);
-                                        });
-                                    </script>
+                                        $hasOther = collect($pairs)->contains(
+                                            fn($p) => strcasecmp($p['value'], 'Other') === 0 ||
+                                                strcasecmp($p['label'], 'Other') === 0,
+                                        );
+                                        if (!$hasOther) {
+                                            $pairs[] = ['value' => 'Other', 'label' => 'Other'];
+                                        }
+
+                                        $optKeyFor = function (string $label) use ($field) {
+                                            return "application.form.fields.$field->name.options." .
+                                                \Illuminate\Support\Str::slug($label, '_');
+                                        };
+
+                                        $__opts = [];
+                                        foreach ($pairs as $p) {
+                                            $__opts[$p['value']] = trk($optKeyFor($p['label']), $p['label']);
+                                        }
+                                    @endphp
+
+                                    <x-ui.status-select name="{{ $field->name }}" id="{{ $field->name }}"
+                                        :required="$field->is_required" :placeholder="tr('Select an option')" :value="$selectedValue" :options="$__opts" />
+
+                                    @if ($field->name === 'industry_type')
+                                        <div class="mb-4" id="industry_other_block" style="display:none">
+                                            <label for="industry_type_other" class="block text-gray-700 font-bold mb-2">
+                                                @tr('Please specify the industry')
+                                            </label>
+                                            <input type="text" name="industry_type_other" id="industry_type_other"
+                                                value="{{ old('industry_type_other', $forceOther ? $pref : '') }}"
+                                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                                                placeholder="@tr('Type your industry')">
+                                            @error('industry_type_other')
+                                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
+                                        <script>
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                const select = document.getElementById('{{ $field->name }}');
+                                                const otherInput = document.querySelector('[name="industry_type_other"]');
+                                                if (!select || !otherInput) return;
+
+                                                const container = otherInput.closest('.mb-4') || otherInput.parentElement;
+
+                                                const toggle = () => {
+                                                    const isOther = (select.value || '').toLowerCase() === 'other';
+                                                    container.style.display = isOther ? 'block' : 'none';
+                                                    if (!isOther) {
+                                                        otherInput.value = '';
+                                                    }
+                                                };
+
+                                                @if ($forceOther)
+                                                    if (!otherInput.value) {
+                                                        otherInput.value = @json($pref);
+                                                    }
+                                                @endif
+
+                                                toggle();
+                                                select.addEventListener('change', toggle);
+                                            });
+                                        </script>
+                                    @endif
+                                @else
+                                    <input type="{{ $field->type }}" name="{{ $field->name }}" id="{{ $field->name }}"
+                                        value="{{ is_array($prefill) ? '' : $prefill }}"
+                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
                                 @endif
-                            @else
-                                <input type="{{ $field->type }}" name="{{ $field->name }}" id="{{ $field->name }}"
-                                    value="{{ is_array($prefill) ? '' : $prefill }}"
-                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
-                            @endif
 
-                            @error($field->name)
-                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    @endif
-                @endforeach
+                                @error($field->name)
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        @endif
+                    @endforeach
 
-                <div class="mt-8">
-                    <button type="submit"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
-                        @tr('Submit Application')
-                    </button>
-                </div>
-            </form>
+                    <div class="mt-8">
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
+                            @tr('Submit Application')
+                        </button>
+                    </div>
+                </form>
+            @endif
         </div>
     </div>
 
