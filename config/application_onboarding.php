@@ -17,5 +17,5 @@ return [
     // اسم الـ guard لو احتجته
     'admin_guard' => null,
     'public_layout' => 'layouts.public',
-    'admin_layout' => 'layouts.superadmin',
+    'admin_layout' => 'layouts.admin',
 ];

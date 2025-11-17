@@ -1,4 +1,4 @@
-@extends(config('application_onboarding.admin_layout', 'layouts.superadmin'))
+@extends(config('application_onboarding.admin_layout', 'layouts.admin'))
 
 @section('content')
     <div class="space-y-6">
