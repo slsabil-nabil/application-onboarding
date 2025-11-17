@@ -27,10 +27,12 @@ class PublicApplicationController extends Controller
 
         // الحقول الديناميكية من جدول form_fields
         $fields = FormField::orderBy('order')->get();
+        $hasForm = $fields->isNotEmpty();
 
         return view('application-onboarding::public.apply', [
             'application' => $application,
-            'fields'      => $fields,
+            'fields' => $fields,
+            'hasForm' => $hasForm,
         ]);
     }
 
@@ -41,16 +43,16 @@ class PublicApplicationController extends Controller
     {
         // فحص الحقول الأساسية فقط، والباقي يخزن في form_data
         $data = $request->validate([
-            'business_name'        => 'required|string|max:255',
-            'industry_type'        => 'nullable|string|max:255',
-            'industry_type_other'  => 'nullable|string|max:255',
-            'owner_name'           => 'required|string|max:255',
-            'owner_email'          => 'required|email|max:255',
-            'owner_phone'          => 'nullable|string|max:40',
-            'accept_policies'      => 'required|string|in:yes',
+            'business_name' => 'required|string|max:255',
+            'industry_type' => 'nullable|string|max:255',
+            'industry_type_other' => 'nullable|string|max:255',
+            'owner_name' => 'required|string|max:255',
+            'owner_email' => 'required|email|max:255',
+            'owner_phone' => 'nullable|string|max:40',
+            'accept_policies' => 'required|string|in:yes',
         ], [
             'accept_policies.required' => __('You must accept the application policies.'),
-            'accept_policies.in'       => __('You must accept the application policies.'),
+            'accept_policies.in' => __('You must accept the application policies.'),
         ]);
 
         // معالجة خيار "Other" لنوع الصناعة
@@ -63,9 +65,9 @@ class PublicApplicationController extends Controller
         $coreData = [
             'business_name' => $data['business_name'],
             'industry_type' => $industry,
-            'owner_name'    => $data['owner_name'],
-            'owner_email'   => $data['owner_email'],
-            'owner_phone'   => $data['owner_phone'] ?? null,
+            'owner_name' => $data['owner_name'],
+            'owner_email' => $data['owner_email'],
+            'owner_phone' => $data['owner_phone'] ?? null,
         ];
 
         // form_data: كل مدخلات النموذج (عدا التوكن وحقل الموافقة)
@@ -92,7 +94,7 @@ class PublicApplicationController extends Controller
         } else {
             // إنشاء طلب جديد
             BusinessApplication::create($coreData + [
-                'status'    => 'pending',
+                'status' => 'pending',
                 'form_data' => $formData,
             ]);
         }
@@ -122,11 +124,11 @@ class PublicApplicationController extends Controller
         }
 
         return view('application-onboarding::public.interpolation-form', [
-            'application'  => $application,
+            'application' => $application,
             'requiredDocs' => (array) ($application->interpolation_required_docs ?? []),
-            'token'        => $token,
-            'note'         => $application->interpolation_note,
-            'corrections'  => (array) ($application->interpolation_contact_corrections ?? []),
+            'token' => $token,
+            'note' => $application->interpolation_note,
+            'corrections' => (array) ($application->interpolation_contact_corrections ?? []),
         ]);
     }
 

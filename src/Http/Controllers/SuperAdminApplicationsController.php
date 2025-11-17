@@ -16,6 +16,13 @@ use App\Services\Sms\SmsTemplate;
 class SuperAdminApplicationsController extends Controller
 {
     /**
+     * entry point مطابق للراوت superadmin.applications.index
+     */
+    public function index(Request $request)
+    {
+        return $this->applicationsIndex($request);
+    }
+    /**
      * قائمة طلبات الانضمام مع فلتر الحالة
      */
     public function applicationsIndex(Request $request)
@@ -23,8 +30,8 @@ class SuperAdminApplicationsController extends Controller
         $status = $request->query('status', 'pending');
 
         $applications = BusinessApplication::when($status === 'pending', function ($query) {
-                return $query->where('status', 'pending');
-            })
+            return $query->where('status', 'pending');
+        })
             ->when($status === 'accepted', function ($query) {
                 return $query->where('status', 'accepted');
             })
@@ -38,7 +45,7 @@ class SuperAdminApplicationsController extends Controller
             ->get();
 
         return view('application-onboarding::superadmin.applications.index', [
-            'applications'  => $applications,
+            'applications' => $applications,
             'currentStatus' => $status,
         ]);
     }
@@ -52,9 +59,9 @@ class SuperAdminApplicationsController extends Controller
         $application->save();
 
         return redirect()->route('superadmin.applications.index')->with('success', [
-            'title'  => ['en' => 'Interpolation started', 'ar' => 'تم بدء الاستيفاء'],
+            'title' => ['en' => 'Interpolation started', 'ar' => 'تم بدء الاستيفاء'],
             'detail' => ['en' => 'Application moved to Interpolation.', 'ar' => 'تم نقل الطلب إلى الاستيفاء.'],
-            'level'  => 'success',
+            'level' => 'success',
         ]);
     }
 
@@ -74,11 +81,11 @@ class SuperAdminApplicationsController extends Controller
     public function submitDocuments(Request $request, BusinessApplication $application)
     {
         $request->validate([
-            'docs'                 => 'nullable|array',
-            'docs.*'               => 'nullable|string|max:255',
-            'interpolation_note'   => 'nullable|string|max:500',
-            'request_corrections'  => 'nullable|array',
-            'request_corrections.*'=> 'in:owner_email,owner_phone',
+            'docs' => 'nullable|array',
+            'docs.*' => 'nullable|string|max:255',
+            'interpolation_note' => 'nullable|string|max:500',
+            'request_corrections' => 'nullable|array',
+            'request_corrections.*' => 'in:owner_email,owner_phone',
         ]);
 
         // تنظيف الوثائق الفارغة
@@ -130,24 +137,24 @@ class SuperAdminApplicationsController extends Controller
 
             $body = SmsTemplate::render('manager', 'documents_request', [
                 'business' => $application->business_name ?? ($locale === 'ar' ? 'منشأتك' : 'your business'),
-                'link'     => $resubmitUrl,
+                'link' => $resubmitUrl,
             ], $locale);
 
             dispatch((new SendSmsJob($to, $body))->onQueue(config('sms.queue', 'sms')));
 
             Log::info('intp_sms_queued', [
                 'app_id' => $application->id,
-                'to'     => $to,
-                'lang'   => $locale,
+                'to' => $to,
+                'lang' => $locale,
             ]);
         }
 
         return redirect()
             ->route('superadmin.applications.index', ['status' => 'interpolation'])
             ->with('success', [
-                'title'  => ['en' => 'Request sent', 'ar' => 'تم إرسال الطلب'],
+                'title' => ['en' => 'Request sent', 'ar' => 'تم إرسال الطلب'],
                 'detail' => ['en' => 'Email/SMS sent to applicant.', 'ar' => 'تم إرسال بريد ورسالة SMS للمنشأة.'],
-                'level'  => 'success',
+                'level' => 'success',
             ])
             ->with('missingDocuments', $documents);
     }
@@ -163,9 +170,9 @@ class SuperAdminApplicationsController extends Controller
         return redirect()
             ->route('superadmin.applications.index', ['status' => 'appeal'])
             ->with('success', [
-                'title'  => ['en' => 'Document request sent', 'ar' => 'تم إرسال طلب الوثائق'],
+                'title' => ['en' => 'Document request sent', 'ar' => 'تم إرسال طلب الوثائق'],
                 'detail' => ['en' => 'Status updated to Appeal.', 'ar' => 'تم تحديث الحالة إلى الاستئناف.'],
-                'level'  => 'success',
+                'level' => 'success',
             ]);
     }
 }
