@@ -73,20 +73,23 @@
 
                                 @elseif ($field->type === 'file')
                                     {{-- حقل الملفات مع إظهار أسماء الملفات المختارة --}}
-                                    <label for="{{ $field->name }}"
-                                           class="cursor-pointer bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-full hover:bg-blue-100">
-                                        @tr('Choose Files')
-                                    </label>
+                                    <div class="file-input-wrapper">
+                                        <label for="{{ $field->name }}"
+                                               class="cursor-pointer bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-full hover:bg-blue-100 inline-block">
+                                            @tr('Choose Files')
+                                        </label>
 
-                                    <input
-                                        type="file"
-                                        name="{{ $field->name }}[]"
-                                        id="{{ $field->name }}"
-                                        class="hidden file-input-ao"
-                                        onchange="updateFileList('{{ $field->name }}', '{{ $field->name }}-list')"
-                                        multiple>
+                                        <input
+                                            type="file"
+                                            name="{{ $field->name }}[]"
+                                            id="{{ $field->name }}"
+                                            class="hidden"
+                                            multiple>
 
-                                    <p id="{{ $field->name }}-list" class="text-xs text-gray-500 mt-2"></p>
+                                        <div id="{{ $field->name }}-display" class="file-names-display text-xs text-gray-500 mt-2">
+                                            {{-- سيتم تعبئته بالجافاسكريبت --}}
+                                        </div>
+                                    </div>
 
                                 @elseif ($field->type === 'list')
                                     @php
@@ -232,36 +235,53 @@
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <script>
-        const SELECTED_LABEL = @json(tr('Selected:'));
-        const NO_FILES_LABEL = @json(tr('No files selected.'));
-
-        // تحديث نص الحقل أسفل زر اختيار الملفات - نفس الدالة المستخدمة في طابور
-        function updateFileList(inputId, listId) {
-            const input = document.getElementById(inputId);
-            const listContainer = document.getElementById(listId);
+        // تعريف الدوال في النطاق العالمي أولاً
+        window.handleFileSelection = function(inputElement) {
+            const displayElement = document.getElementById(inputElement.id + '-display');
             
-            if (!input || !listContainer) return;
-
-            if (input.files && input.files.length > 0) {
-                const fileNames = Array.from(input.files).map(f => f.name);
-                listContainer.textContent = SELECTED_LABEL + ' ' + fileNames.join(', ');
-            } else {
-                listContainer.textContent = NO_FILES_LABEL;
+            if (!displayElement) {
+                console.error('Display element not found for:', inputElement.id);
+                return;
             }
+
+            if (inputElement.files && inputElement.files.length > 0) {
+                const fileNames = Array.from(inputElement.files).map(f => f.name);
+                displayElement.textContent = 'Selected: ' + fileNames.join(', ');
+                displayElement.style.display = 'block';
+            } else {
+                displayElement.textContent = '';
+                displayElement.style.display = 'none';
+            }
+        };
+
+        // تهيئة جميع حقول الملفات عند تحميل الصفحة
+        function initializeFileInputs() {
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            
+            fileInputs.forEach(input => {
+                const displayElement = document.getElementById(input.id + '-display');
+                
+                // تحديث العرض الحالي
+                if (input.files && input.files.length > 0) {
+                    const fileNames = Array.from(input.files).map(f => f.name);
+                    if (displayElement) {
+                        displayElement.textContent = 'Selected: ' + fileNames.join(', ');
+                        displayElement.style.display = 'block';
+                    }
+                } else if (displayElement) {
+                    displayElement.textContent = '';
+                    displayElement.style.display = 'none';
+                }
+
+                // إضافة مستمع حدث للتغيير
+                input.addEventListener('change', function() {
+                    window.handleFileSelection(this);
+                });
+            });
         }
 
-        // تهيئة عرض أسماء الملفات عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', function () {
-            // تحديث جميع حقول الملفات عند تحميل الصفحة
-            const fileInputs = document.querySelectorAll('input[type="file"]');
-            fileInputs.forEach(input => {
-                const listId = input.id + '-list';
-                updateFileList(input.id, listId);
-            });
-        });
-
         // Robust "Other" toggler for industry_type with dynamic other-field names
-        document.addEventListener('DOMContentLoaded', function () {
+        function initializeIndustryTypeToggle() {
             const select = document.querySelector('[name="industry_type"]');
             if (!select) return;
 
@@ -289,6 +309,51 @@
 
             toggle();
             select.addEventListener('change', toggle);
+        }
+
+        // تهيئة كل شيء عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeFileInputs();
+            initializeIndustryTypeToggle();
+            
+            // إضافة ستايل إضافي للعرض
+            const style = document.createElement('style');
+            style.textContent = `
+                .file-names-display {
+                    min-height: 20px;
+                    padding: 4px 8px;
+                    background-color: #f9fafb;
+                    border-radius: 4px;
+                    border: 1px solid #e5e7eb;
+                    transition: all 0.2s ease;
+                }
+                .file-names-display:empty {
+                    display: none;
+                }
+            `;
+            document.head.appendChild(style);
         });
+
+        // بديل أبسط: استخدام دالة مباشرة بدون تعريف مسبق
+        function setupSimpleFileDisplay() {
+            document.querySelectorAll('input[type="file"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    const display = document.getElementById(this.id + '-display');
+                    if (!display) return;
+                    
+                    if (this.files.length > 0) {
+                        const names = Array.from(this.files).map(f => f.name);
+                        display.textContent = 'Selected: ' + names.join(', ');
+                        display.style.display = 'block';
+                    } else {
+                        display.textContent = '';
+                        display.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // تفعيل البديل البسيط
+        document.addEventListener('DOMContentLoaded', setupSimpleFileDisplay);
     </script>
 @endsection
