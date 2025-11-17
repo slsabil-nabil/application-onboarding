@@ -38,7 +38,7 @@
             <table class="min-w-full divide-y divide-slate-200 text-sm">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">#</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide"> @tr('Number')</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
                             @tr('Business')
                         </th>
