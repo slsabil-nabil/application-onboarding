@@ -30,12 +30,12 @@
                     </h2>
 
                     <p class="text-gray-600">
-                        @tr('Please ask the Superadmin to define the application form first from “Application Onboarding → Form Builder”.')
+                        @tr('Please ask the Superadmin to define the application form first from "Application Onboarding → Form Builder".')
                     </p>
                 </div>
             @else
                 <form id="applicationForm" action="{{ route('application.store', $application->resubmit_token ?? null) }}"
-                    method="POST" enctype="multipart/form-data">
+                      method="POST" enctype="multipart/form-data">
                     @csrf
 
                     @foreach ($fields as $field)
@@ -69,17 +69,25 @@
 
                                 @if ($field->type === 'textarea')
                                     <textarea name="{{ $field->name }}" id="{{ $field->name }}"
-                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">{{ $prefill }}</textarea>
+                                              class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">{{ $prefill }}</textarea>
+
                                 @elseif ($field->type === 'file')
+                                    {{-- حقل الملفات مع إظهار أسماء الملفات المختارة --}}
                                     <label for="{{ $field->name }}"
-                                        class="cursor-pointer bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-full hover:bg-blue-100">
+                                           class="cursor-pointer bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-full hover:bg-blue-100">
                                         @tr('Choose Files')
                                     </label>
-                                    <input type="file" name="{{ $field->name }}[]" id="{{ $field->name }}"
-                                        class="hidden"
+
+                                    <input
+                                        type="file"
+                                        name="{{ $field->name }}[]"
+                                        id="{{ $field->name }}"
+                                        class="hidden file-input-ao"
                                         onchange="updateFileList('{{ $field->name }}', '{{ $field->name }}-list')"
                                         multiple>
+
                                     <p id="{{ $field->name }}-list" class="text-xs text-gray-500 mt-2"></p>
+
                                 @elseif ($field->type === 'list')
                                     @php
                                         $raw = $field->options ?? [];
@@ -119,7 +127,7 @@
 
                                         $hasOther = collect($pairs)->contains(
                                             fn($p) => strcasecmp($p['value'], 'Other') === 0 ||
-                                                strcasecmp($p['label'], 'Other') === 0,
+                                                      strcasecmp($p['label'], 'Other') === 0,
                                         );
                                         if (!$hasOther) {
                                             $pairs[] = ['value' => 'Other', 'label' => 'Other'];
@@ -136,8 +144,13 @@
                                         }
                                     @endphp
 
-                                    <x-ui.status-select name="{{ $field->name }}" id="{{ $field->name }}"
-                                        :required="$field->is_required" :placeholder="tr('Select an option')" :value="$selectedValue" :options="$__opts" />
+                                    <x-ui.status-select
+                                        name="{{ $field->name }}"
+                                        id="{{ $field->name }}"
+                                        :required="$field->is_required"
+                                        :placeholder="tr('Select an option')"
+                                        :value="$selectedValue"
+                                        :options="$__opts" />
 
                                     @if ($field->name === 'industry_type')
                                         <div class="mb-4" id="industry_other_block" style="display:none">
@@ -145,16 +158,16 @@
                                                 @tr('Please specify the industry')
                                             </label>
                                             <input type="text" name="industry_type_other" id="industry_type_other"
-                                                value="{{ old('industry_type_other', $forceOther ? $pref : '') }}"
-                                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-                                                placeholder="@tr('Type your industry')">
+                                                   value="{{ old('industry_type_other', $forceOther ? $pref : '') }}"
+                                                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                                                   placeholder="@tr('Type your industry')">
                                             @error('industry_type_other')
                                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                             @enderror
                                         </div>
 
                                         <script>
-                                            document.addEventListener('DOMContentLoaded', function() {
+                                            document.addEventListener('DOMContentLoaded', function () {
                                                 const select = document.getElementById('{{ $field->name }}');
                                                 const otherInput = document.querySelector('[name="industry_type_other"]');
                                                 if (!select || !otherInput) return;
@@ -170,9 +183,9 @@
                                                 };
 
                                                 @if ($forceOther)
-                                                    if (!otherInput.value) {
-                                                        otherInput.value = @json($pref);
-                                                    }
+                                                if (!otherInput.value) {
+                                                    otherInput.value = @json($pref);
+                                                }
                                                 @endif
 
                                                 toggle();
@@ -181,9 +194,11 @@
                                         </script>
                                     @endif
                                 @else
-                                    <input type="{{ $field->type }}" name="{{ $field->name }}" id="{{ $field->name }}"
-                                        value="{{ is_array($prefill) ? '' : $prefill }}"
-                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                                    <input type="{{ $field->type }}"
+                                           name="{{ $field->name }}"
+                                           id="{{ $field->name }}"
+                                           value="{{ is_array($prefill) ? '' : $prefill }}"
+                                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
                                 @endif
 
                                 @error($field->name)
@@ -195,7 +210,7 @@
 
                     <div class="mt-8">
                         <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded">
                             @tr('Submit Application')
                         </button>
                     </div>
@@ -217,21 +232,36 @@
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <script>
-        const SELECTED_LABEL = @json(tr('Selected'));
+        const SELECTED_LABEL = @json(tr('Selected:'));
+        const NO_FILES_LABEL = @json(tr('No files selected.'));
 
+        // تحديث نص الحقل أسفل زر اختيار الملفات - نفس الدالة المستخدمة في طابور
         function updateFileList(inputId, listId) {
             const input = document.getElementById(inputId);
             const listContainer = document.getElementById(listId);
-            if (input.files.length > 0) {
+            
+            if (!input || !listContainer) return;
+
+            if (input.files && input.files.length > 0) {
                 const fileNames = Array.from(input.files).map(f => f.name);
-                listContainer.textContent = SELECTED_LABEL + ': ' + fileNames.join(', ');
+                listContainer.textContent = SELECTED_LABEL + ' ' + fileNames.join(', ');
             } else {
-                listContainer.textContent = '';
+                listContainer.textContent = NO_FILES_LABEL;
             }
         }
 
+        // تهيئة عرض أسماء الملفات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function () {
+            // تحديث جميع حقول الملفات عند تحميل الصفحة
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(input => {
+                const listId = input.id + '-list';
+                updateFileList(input.id, listId);
+            });
+        });
+
         // Robust "Other" toggler for industry_type with dynamic other-field names
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const select = document.querySelector('[name="industry_type"]');
             if (!select) return;
 
