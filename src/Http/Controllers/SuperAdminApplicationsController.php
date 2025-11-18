@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Slsabil\ApplicationOnboarding\Models\BusinessApplication;
-use App\Mail\DocumentsRequestMail;
+use Slsabil\ApplicationOnboarding\Mail\DocumentsRequestMail;
 use App\Jobs\SendSmsJob;
 use App\Services\Sms\SmsTemplate;
 
@@ -31,8 +31,8 @@ class SuperAdminApplicationsController extends Controller
         $status = $request->query('status', 'pending');
 
         $applications = BusinessApplication::when($status === 'pending', function ($query) {
-                return $query->where('status', 'pending');
-            })
+            return $query->where('status', 'pending');
+        })
             ->when($status === 'accepted', function ($query) {
                 return $query->where('status', 'accepted');
             })
@@ -46,7 +46,7 @@ class SuperAdminApplicationsController extends Controller
             ->get();
 
         return view('application-onboarding::superadmin.applications.index', [
-            'applications'  => $applications,
+            'applications' => $applications,
             'currentStatus' => $status,
         ]);
     }
@@ -60,8 +60,8 @@ class SuperAdminApplicationsController extends Controller
         $industryOptions = config('application_onboarding.industry_options', []);
 
         return view('application-onboarding::superadmin.applications.show', [
-            'application'      => $application,
-            'industryOptions'  => $industryOptions,
+            'application' => $application,
+            'industryOptions' => $industryOptions,
         ]);
     }
 
@@ -140,8 +140,13 @@ class SuperAdminApplicationsController extends Controller
             )
         );
 
-        // إرسال SMS (اختياري حسب إعدادات النظام)
-        if (!empty($application->owner_phone) && config('sms.enabled', true)) {
+        // إرسال SMS (اختياري حسب إعدادات النظام + وجود الكلاسات)
+        if (
+            !empty($application->owner_phone)
+            && config('sms.enabled', false)
+            && class_exists(\App\Jobs\SendSmsJob::class)
+            && class_exists(\App\Services\Sms\SmsTemplate::class)
+        ) {
             $to = preg_replace('/\s+/', '', $application->owner_phone);
             if (!str_starts_with($to, '+')) {
                 $cc = rtrim(config('sms.default_country_code', '+967'));
@@ -150,12 +155,12 @@ class SuperAdminApplicationsController extends Controller
 
             $locale = data_get($application->form_data, '_locale', config('app.locale', 'ar'));
 
-            $body = SmsTemplate::render('manager', 'documents_request', [
+            $body = \App\Services\Sms\SmsTemplate::render('manager', 'documents_request', [
                 'business' => $application->business_name ?? ($locale === 'ar' ? 'منشأتك' : 'your business'),
                 'link' => $resubmitUrl,
             ], $locale);
 
-            dispatch((new SendSmsJob($to, $body))->onQueue(config('sms.queue', 'sms')));
+            dispatch((new \App\Jobs\SendSmsJob($to, $body))->onQueue(config('sms.queue', 'sms')));
 
             Log::info('intp_sms_queued', [
                 'app_id' => $application->id,
@@ -205,9 +210,9 @@ class SuperAdminApplicationsController extends Controller
         return redirect()
             ->route('superadmin.applications.index', ['status' => 'accepted'])
             ->with('success', [
-                'title'  => ['en' => 'Application approved', 'ar' => 'تمت الموافقة على الطلب'],
+                'title' => ['en' => 'Application approved', 'ar' => 'تمت الموافقة على الطلب'],
                 'detail' => ['en' => $application->business_name, 'ar' => $application->business_name],
-                'level'  => 'success',
+                'level' => 'success',
             ]);
     }
 
@@ -218,7 +223,7 @@ class SuperAdminApplicationsController extends Controller
     {
         $request->validate([
             'rejection_reason' => 'nullable|string|max:120',
-            'include_reason'   => 'nullable|in:0,1',
+            'include_reason' => 'nullable|in:0,1',
         ]);
 
         $application->status = 'rejected';
@@ -235,9 +240,9 @@ class SuperAdminApplicationsController extends Controller
         return redirect()
             ->route('superadmin.applications.index', ['status' => 'rejected'])
             ->with('success', [
-                'title'  => ['en' => 'Application declined', 'ar' => 'تم رفض الطلب'],
+                'title' => ['en' => 'Application declined', 'ar' => 'تم رفض الطلب'],
                 'detail' => ['en' => $application->business_name, 'ar' => $application->business_name],
-                'level'  => 'success',
+                'level' => 'success',
             ]);
     }
 }
