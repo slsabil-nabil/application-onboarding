@@ -5,6 +5,7 @@ namespace Slsabil\ApplicationOnboarding\Http\Controllers;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Slsabil\ApplicationOnboarding\Models\BusinessApplication;
 use Slsabil\ApplicationOnboarding\Models\FormField;
 
@@ -49,11 +50,15 @@ class PublicApplicationController extends Controller
             'owner_name' => 'required|string|max:255',
             'owner_email' => 'required|email|max:255',
             'owner_phone' => 'nullable|string|max:40',
+            // ملاحظة: حقول الملفات لا نجعلها required هنا حتى تبقى مرنة
         ]);
 
         // معالجة خيار "Other" لنوع الصناعة
         $industry = $data['industry_type'] ?? null;
-        if (($industry === 'Other' || $industry === 'أخرى' || $industry === 'اخرى') && !empty($data['industry_type_other'])) {
+        if (
+            ($industry === 'Other' || $industry === 'أخرى' || $industry === 'اخرى')
+            && !empty($data['industry_type_other'])
+        ) {
             $industry = $data['industry_type_other'];
         }
 
@@ -66,10 +71,40 @@ class PublicApplicationController extends Controller
             'owner_phone' => $data['owner_phone'] ?? null,
         ];
 
-        // form_data: كل مدخلات النموذج (عدا التوكن وحقل الموافقة)
+        // form_data: كل مدخلات النموذج (عدا التوكن + حقول الملفات)
         $formData = $request->except([
             '_token',
+            'business_licenses',
+            'supporting_documents',
         ]);
+
+        // =========================
+        // حفظ الملفات في أعمدة JSON
+        // =========================
+        $licensesPaths = [];
+        $supportingPaths = [];
+
+        // business_licenses[]
+        if ($request->hasFile('business_licenses')) {
+            foreach ($request->file('business_licenses') as $file) {
+                if (!$file || !$file->isValid()) {
+                    continue;
+                }
+
+                $licensesPaths[] = $file->store('applications/licenses', 'public');
+            }
+        }
+
+        // supporting_documents[]
+        if ($request->hasFile('supporting_documents')) {
+            foreach ($request->file('supporting_documents') as $file) {
+                if (!$file || !$file->isValid()) {
+                    continue;
+                }
+
+                $supportingPaths[] = $file->store('applications/supporting', 'public');
+            }
+        }
 
         if ($token) {
             // تحديث طلب موجود عبر رابط إعادة التعبئة
@@ -81,6 +116,15 @@ class PublicApplicationController extends Controller
 
             $application->fill($coreData);
             $application->form_data = $formData;
+
+            // في التعديل نسمح باستبدال الملفات السابقة (إن رُفعت ملفات جديدة)
+            if (!empty($licensesPaths)) {
+                $application->licenses_paths = $licensesPaths;
+            }
+            if (!empty($supportingPaths)) {
+                $application->supporting_documents_paths = $supportingPaths;
+            }
+
             $application->status = 'pending';
             $application->interpolation = 'completed'; // أو حسب منطقك
             $application->resubmit_token = null;
@@ -91,12 +135,25 @@ class PublicApplicationController extends Controller
             BusinessApplication::create($coreData + [
                 'status' => 'pending',
                 'form_data' => $formData,
+                'licenses_paths' => $licensesPaths,          // ← هنا نحفظ مسارات التراخيص
+                'supporting_documents_paths' => $supportingPaths,        // ← وهنا المستندات الإضافية
             ]);
         }
 
         return redirect()
             ->route('application.success')
-            ->with('success', __('Application submitted successfully.'));
+            ->with('success', [
+                'title' => [
+                    'en' => 'Application submitted',
+                    'ar' => 'تم إرسال الطلب',
+                ],
+                'detail' => [
+                    'en' => 'Your application has been submitted and will be reviewed.',
+                    'ar' => 'تم استلام طلبك وسيتم مراجعته قريباً.',
+                ],
+                'level' => 'success',
+            ]);
+
     }
 
     /**

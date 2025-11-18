@@ -176,7 +176,10 @@ class SuperAdminApplicationsController extends Controller
                 'detail' => ['en' => 'Email/SMS sent to applicant.', 'ar' => 'تم إرسال بريد ورسالة SMS للمنشأة.'],
                 'level' => 'success',
             ])
-            ->with('missingDocuments', $documents);
+            ->with('missingDocuments', $documents)
+            ->with('toast', [
+                __('Documents request sent to applicant and moved to Pending Review tab.'),
+            ]);
     }
 
     /**
@@ -213,6 +216,9 @@ class SuperAdminApplicationsController extends Controller
                 'title' => ['en' => 'Application approved', 'ar' => 'تمت الموافقة على الطلب'],
                 'detail' => ['en' => $application->business_name, 'ar' => $application->business_name],
                 'level' => 'success',
+            ])
+            ->with('toast', [
+                __('Application approved successfully and moved to Accepted tab.'),
             ]);
     }
 
@@ -243,6 +249,9 @@ class SuperAdminApplicationsController extends Controller
                 'title' => ['en' => 'Application declined', 'ar' => 'تم رفض الطلب'],
                 'detail' => ['en' => $application->business_name, 'ar' => $application->business_name],
                 'level' => 'success',
+            ])
+            ->with('toast', [
+                __('Application declined successfully and moved to Rejected tab.'),
             ]);
     }
 }
