@@ -145,15 +145,15 @@ class PublicApplicationController extends Controller
             // 1) إنشاء سجل الإشعار
             $notification = Notification::create([
                 'category' => 'new_application',
-                'title' => [ // الآن نستخدم array مباشرة
+                'title' => [ // استخدم array مباشرة
                     'ar' => 'تم تقديم طلب انضمام جديد',
                     'en' => 'New onboarding application submitted',
                 ],
-                'body' => [ // الآن نستخدم array مباشرة
+                'body' => [ // استخدم array مباشرة
                     'ar' => 'قدمت منشأة ' . $application->business_name . ' طلب انضمام.',
                     'en' => $application->business_name . ' submitted an onboarding request.',
                 ],
-                'data' => [
+                'data' => [ // استخدم array مباشرة
                     'action_url' => url('/superadmin/applications/' . $application->id),
                 ],
                 'requires_action' => true,
