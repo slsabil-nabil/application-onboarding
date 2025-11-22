@@ -144,18 +144,20 @@ class PublicApplicationController extends Controller
 
             // 1) إنشاء سجل الإشعار
             $notification = Notification::create([
-                'title_localized' => [
-                    'en' => 'New onboarding application submitted',
+                'category' => 'new_application',
+                'title' => [ // الآن نستخدم array مباشرة
                     'ar' => 'تم تقديم طلب انضمام جديد',
+                    'en' => 'New onboarding application submitted',
                 ],
-                'body_localized' => [
-                    'en' => $application->business_name . ' submitted an onboarding request.',
+                'body' => [ // الآن نستخدم array مباشرة
                     'ar' => 'قدمت منشأة ' . $application->business_name . ' طلب انضمام.',
+                    'en' => $application->business_name . ' submitted an onboarding request.',
                 ],
-                'level' => 'info',
-                'action_url' => route('superadmin.applications.show', $application->id),
+                'data' => [
+                    'action_url' => url('/superadmin/applications/' . $application->id),
+                ],
+                'requires_action' => true,
             ]);
-
             // 2) جلب كل مستخدمي السوبر أدمن
             $admins = \App\Models\User::where('role', 'sa')->get();
 
