@@ -8,6 +8,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Slsabil\ApplicationOnboarding\Models\BusinessApplication;
 use Slsabil\ApplicationOnboarding\Models\FormField;
+use Slsabil\NotificationCenter\Models\Notification;
+use Slsabil\NotificationCenter\Models\NotificationRecipient;
 
 class PublicApplicationController extends Controller
 {
@@ -131,13 +133,42 @@ class PublicApplicationController extends Controller
             $application->resubmit_expires_at = null;
             $application->save();
         } else {
-            // إنشاء طلب جديد
-            BusinessApplication::create($coreData + [
+            // إنشاء الطلب الجديد
+            $application = BusinessApplication::create($coreData + [
                 'status' => 'pending',
                 'form_data' => $formData,
-                'licenses_paths' => $licensesPaths,          // ← هنا نحفظ مسارات التراخيص
-                'supporting_documents_paths' => $supportingPaths,        // ← وهنا المستندات الإضافية
+                'licenses_paths' => $licensesPaths,
+                'supporting_documents_paths' => $supportingPaths,
             ]);
+
+            // ================================
+//  إرسال إشعار للسوبر أدمن
+// ================================
+
+            // 1) إنشاء سجل الإشعار
+            $notification = Notification::create([
+                'title' => [
+                    'en' => 'New onboarding application submitted',
+                    'ar' => 'تم تقديم طلب انضمام جديد',
+                ],
+                'body' => [
+                    'en' => $application->business_name . ' submitted an onboarding request.',
+                    'ar' => 'قدمت منشأة ' . $application->business_name . ' طلب انضمام.',
+                ],
+                'action_url' => url('/superadmin/applications/' . $application->id),
+            ]);
+
+            // 2) جلب كل مستخدمي السوبر أدمن
+            $admins = \App\Models\User::where('role', 'sa')->get();
+
+            // 3) ربطهم بالمستلمين
+            foreach ($admins as $admin) {
+                NotificationRecipient::create([
+                    'notification_id' => $notification->id,
+                    'user_id' => $admin->id,
+                ]);
+            }
+
         }
 
         return redirect()
