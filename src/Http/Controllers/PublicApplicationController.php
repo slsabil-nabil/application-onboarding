@@ -78,6 +78,7 @@ class PublicApplicationController extends Controller
             '_token',
             'business_licenses',
             'supporting_documents',
+            'industry_type_options',
         ]);
 
         // =========================
@@ -141,21 +142,18 @@ class PublicApplicationController extends Controller
                 'supporting_documents_paths' => $supportingPaths,
             ]);
 
-            // ================================
-//  إرسال إشعار للسوبر أدمن
-// ================================
-
             // 1) إنشاء سجل الإشعار
             $notification = Notification::create([
-                'title' => [
+                'title_localized' => [
                     'en' => 'New onboarding application submitted',
                     'ar' => 'تم تقديم طلب انضمام جديد',
                 ],
-                'body' => [
+                'body_localized' => [
                     'en' => $application->business_name . ' submitted an onboarding request.',
                     'ar' => 'قدمت منشأة ' . $application->business_name . ' طلب انضمام.',
                 ],
-                'action_url' => url('/superadmin/applications/' . $application->id),
+                'level' => 'info',
+                'action_url' => route('superadmin.applications.show', $application->id),
             ]);
 
             // 2) جلب كل مستخدمي السوبر أدمن

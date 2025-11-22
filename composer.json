@@ -1,7 +1,7 @@
 {
   "name": "slsabil/application-onboarding",
   "description": "Business application onboarding + interpolation module for Tabour and similar systems.",
-  "version": "0.1.0",
+  "version": "dev-main",
   "type": "library",
   "license": "MIT",
   "autoload": {
