@@ -6,10 +6,12 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Slsabil\ApplicationOnboarding\Models\BusinessApplication;
 use Slsabil\ApplicationOnboarding\Models\FormField;
 use Slsabil\NotificationCenter\Models\Notification;
 use Slsabil\NotificationCenter\Models\NotificationRecipient;
+
 
 class PublicApplicationController extends Controller
 {
@@ -44,13 +46,36 @@ class PublicApplicationController extends Controller
      */
     public function submit(Request $request, ?string $token = null)
     {
-        // فحص الحقول الأساسية فقط، والباقي يخزن في form_data
+        // إن وجد توكن، نحدد الطلب الحالي لاستخدامه في قواعد unique (تجاهل نفسه)
+        $currentApplication = null;
+
+        if ($token) {
+            $currentApplication = BusinessApplication::where('resubmit_token', $token)->firstOrFail();
+
+            if ($currentApplication->resubmit_expires_at && Carbon::now()->gt($currentApplication->resubmit_expires_at)) {
+                return back()->withErrors(['link' => 'Resubmission link expired.']);
+            }
+        }
+
+        // فحص الحقول الأساسية فقط، مع منع تكرار اسم المنشأة والإيميل
         $data = $request->validate([
-            'business_name' => 'required|string|max:255',
+            'business_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique((new BusinessApplication)->getTable(), 'business_name')
+                    ->ignore(optional($currentApplication)->id),
+            ],
             'industry_type' => 'nullable|string|max:255',
             'industry_type_other' => 'nullable|string|max:255',
             'owner_name' => 'required|string|max:255',
-            'owner_email' => 'required|email|max:255',
+            'owner_email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique((new BusinessApplication)->getTable(), 'owner_email')
+                    ->ignore(optional($currentApplication)->id),
+            ],
             'owner_phone' => 'nullable|string|max:40',
             // ملاحظة: حقول الملفات لا نجعلها required هنا حتى تبقى مرنة
         ]);
@@ -109,13 +134,9 @@ class PublicApplicationController extends Controller
             }
         }
 
-        if ($token) {
+        if ($currentApplication) {
             // تحديث طلب موجود عبر رابط إعادة التعبئة
-            $application = BusinessApplication::where('resubmit_token', $token)->firstOrFail();
-
-            if ($application->resubmit_expires_at && Carbon::now()->gt($application->resubmit_expires_at)) {
-                return back()->withErrors(['link' => 'Resubmission link expired.']);
-            }
+            $application = $currentApplication;
 
             $application->fill($coreData);
             $application->form_data = $formData;
@@ -143,7 +164,6 @@ class PublicApplicationController extends Controller
             ]);
 
             // 1) إنشاء سجل الإشعار
-            // جهّز المصفوفات أولاً
             $title = [
                 'ar' => 'تم تقديم طلب انضمام جديد',
                 'en' => 'New onboarding application submitted',
@@ -154,24 +174,19 @@ class PublicApplicationController extends Controller
                 'en' => $application->business_name . ' submitted an onboarding request.',
             ];
 
-            $data = [
+            $notifyData = [
                 'action_url' => url('/superadmin/applications/' . $application->id),
                 'application_id' => $application->id,
             ];
 
-            // 1) إنشاء سجل الإشعار مع تحويل صريح لـ JSON
             $notification = Notification::create([
                 'application_id' => $application->id,
                 'category' => 'new_application',
-
-                // نخزنها كنص JSON بشكل صريح
                 'title' => json_encode($title, JSON_UNESCAPED_UNICODE),
                 'body' => json_encode($body, JSON_UNESCAPED_UNICODE),
-                'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
-
+                'data' => json_encode($notifyData, JSON_UNESCAPED_UNICODE),
                 'requires_action' => true,
             ]);
-
 
             // 2) جلب كل مستخدمي السوبر أدمن
             $admins = \App\Models\User::where('role', 'sa')->get();
@@ -183,7 +198,6 @@ class PublicApplicationController extends Controller
                     'user_id' => $admin->id,
                 ]);
             }
-
         }
 
         return redirect()
@@ -199,7 +213,6 @@ class PublicApplicationController extends Controller
                 ],
                 'level' => 'success',
             ]);
-
     }
 
     /**
