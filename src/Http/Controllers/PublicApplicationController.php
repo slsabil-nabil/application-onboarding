@@ -143,21 +143,36 @@ class PublicApplicationController extends Controller
             ]);
 
             // 1) إنشاء سجل الإشعار
+            // جهّز المصفوفات أولاً
+            $title = [
+                'ar' => 'تم تقديم طلب انضمام جديد',
+                'en' => 'New onboarding application submitted',
+            ];
+
+            $body = [
+                'ar' => 'قدمت منشأة ' . $application->business_name . ' طلب انضمام.',
+                'en' => $application->business_name . ' submitted an onboarding request.',
+            ];
+
+            $data = [
+                'action_url' => url('/superadmin/applications/' . $application->id),
+                'application_id' => $application->id,
+            ];
+
+            // 1) إنشاء سجل الإشعار مع تحويل صريح لـ JSON
             $notification = Notification::create([
+                'application_id' => $application->id,
                 'category' => 'new_application',
-                'title' => [ // استخدم array مباشرة
-                    'ar' => 'تم تقديم طلب انضمام جديد',
-                    'en' => 'New onboarding application submitted',
-                ],
-                'body' => [ // استخدم array مباشرة
-                    'ar' => 'قدمت منشأة ' . $application->business_name . ' طلب انضمام.',
-                    'en' => $application->business_name . ' submitted an onboarding request.',
-                ],
-                'data' => [ // استخدم array مباشرة
-                    'action_url' => url('/superadmin/applications/' . $application->id),
-                ],
+
+                // نخزنها كنص JSON بشكل صريح
+                'title' => json_encode($title, JSON_UNESCAPED_UNICODE),
+                'body' => json_encode($body, JSON_UNESCAPED_UNICODE),
+                'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
+
                 'requires_action' => true,
             ]);
+
+
             // 2) جلب كل مستخدمي السوبر أدمن
             $admins = \App\Models\User::where('role', 'sa')->get();
 
@@ -272,6 +287,45 @@ class PublicApplicationController extends Controller
         $application->resubmit_expires_at = Carbon::now();
 
         $application->save();
+
+        /*
+         * ========== NEW: إشعار استيفاء الطلب ==========
+         */
+        $title = [
+            'ar' => 'تم استيفاء طلب منشأة',
+            'en' => 'Application interpolation completed',
+        ];
+
+        $body = [
+            'ar' => 'قامت منشأة ' . ($application->business_name ?: 'غير معروفة') . ' برفع مستندات الاستيفاء المطلوبة.',
+            'en' => ($application->business_name ?: 'The business') . ' has uploaded the requested interpolation documents.',
+        ];
+
+        $data = [
+            'action_url' => url('/superadmin/applications/' . $application->id),
+            'application_id' => $application->id,
+            'type' => 'interpolation_completed',
+        ];
+
+        $notification = Notification::create([
+            'application_id' => $application->id,
+            'category' => 'interpolation_completed', // كاتيجوري مميز للتبويب الجديد
+            'title' => json_encode($title, JSON_UNESCAPED_UNICODE),
+            'body' => json_encode($body, JSON_UNESCAPED_UNICODE),
+            'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
+            'requires_action' => true,
+        ]);
+
+        // إرسال الإشعار لكل السوبرأدمن (role = sa مثلاً)
+        $admins = \App\Models\User::where('role', 'sa')->get();
+
+        foreach ($admins as $admin) {
+            NotificationRecipient::create([
+                'notification_id' => $notification->id,
+                'user_id' => $admin->id,
+            ]);
+        }
+        // ========== END NEW ==========
 
         return redirect()->route('interpolation.success');
     }
